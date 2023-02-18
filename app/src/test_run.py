@@ -6,3 +6,5 @@ x = np.linspace(
 )  # Create a list of evenly-spaced numbers over the range
 plt.plot(x, np.sin(x))  # Plot the sine of each x point
 plt.show()
+
+print('Mariam is learning GIT')
