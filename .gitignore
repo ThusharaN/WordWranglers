@@ -1,3 +1,4 @@
 # created by virtualenv automatically
 *cpython*
 *gitignore*
+app/data/glove.6B.50d.txt
