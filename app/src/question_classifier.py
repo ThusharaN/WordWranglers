@@ -142,7 +142,6 @@ batch_size = 20
 
 embedding = nn.Embedding(vocab_size, word_embedding_dim)
 
-max_seq_length = 10  # maximum sequence length to use for padding
 inputs = []
 for text in question_list:
     # Tokenize the text
