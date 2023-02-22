@@ -1,4 +1,5 @@
 import string
+from collections import Counter
 
 STOP_WORDS = [
     "i",
@@ -161,3 +162,23 @@ def parse_dataset(filename):
         tagged_list.append((question, coarse_class, fine_class))
     print(f"Maximum sentence: {max_sentence_length}")
     return tagged_list, question_list, coarse_class_labels, fine_class_labels
+
+
+def get_vocab(dataset, vocab_size, min_freq):
+    vocab = {
+        "<PAD>": 0,  # special token used for padding sequences
+        "<UNK>": 1,  # special token used for out-of-vocabulary words
+    }
+    word_counts = Counter(
+        token
+        for question, coarse_class, fine_class in dataset
+        for token in question.lower().split(" ")
+        if token not in STOP_WORDS
+    )
+    for i, (word, count) in enumerate(
+        word_counts.most_common(vocab_size - 2)
+    ):
+        if count >= min_freq:
+            vocab[word] = i + 2
+    print(f"Vocabulary length {len(vocab)}")
+    return vocab

@@ -9,6 +9,8 @@ word_embedding_dim: 200
 batch_size: 20
 max_seq_length: 10   # Maximum sequence length to use for padding identified from Gaussian curve
 
+pretrained_glove: ./app/data/glove.6B.200d.txt
+
 # path_train : ../data/train.txt
 # path_dev : ../data/dev.txt path_test : ../data/test.txt classes: coarse
 # model : bow # bow, bilstm, bow_ensemble, bilstm_ensemble...
