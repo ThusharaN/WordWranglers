@@ -1,3 +1,6 @@
 # created by virtualenv automatically
 *cpython*
-*gitignore*
+
+# Training and dev files need not be pushed to the repository
+*training.txt*
+*dev.txt*
