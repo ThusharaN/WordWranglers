@@ -1,11 +1,8 @@
 import os
 import random
-from collections import Counter
 
-import numpy as np
 import torch
-import torch.nn as nn
-import utils
+from app.src.utils import dataset_length, parse_dataset, get_randomly_initialised_bow, get_pre_trained_bow
 import yaml
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import LabelEncoder
@@ -13,15 +10,15 @@ from sklearn.preprocessing import LabelEncoder
 
 def split_training_dataset(training_dataset, split_fraction, training_datapath, validation_datapath):
     # Split the given data set into training and vaidation sets with the given split condition
-    with open(training_dataset, "r") as f:
+    with open(training_dataset, "r", encoding="ISO-8859-1") as f:
         contents = f.readlines()
     split_idx = int(len(contents) * split_fraction)
     random.shuffle(contents)
     dev_data = contents[:split_idx]
     train_data = contents[split_idx:]
-    with open(validation_datapath, "w") as f:
+    with open(validation_datapath, "w", encoding="ISO-8859-1") as f:
         f.writelines(dev_data)
-    with open(training_datapath, "w") as f:
+    with open(training_datapath, "w", encoding="ISO-8859-1") as f:
         f.writelines(train_data)
 
 
@@ -30,69 +27,39 @@ def train(config_file):
     random.seed(1)
 
     with open(
-        os.getcwd().replace("src", "data/") + config_file, "r"
+        os.getcwd() + "/app/data/" + config_file, "r", encoding="ISO-8859-1"
     ) as configurations:
         config = yaml.load(configurations, Loader=yaml.Loader)
 
-    utils.dataset_length(config["original_dataset"], "train")
+    dataset_length(
+        config["original_dataset"],
+        "train")
+
     split_training_dataset(
         config["original_dataset"],
         config["split_ratio"],
         config["training_dataset"],
         config["validation_dataset"],
     )
-    training_data_list, training_question_list, training_coarse_class_labels, training_fine_class_labels, = utils.parse_dataset(config["original_dataset"])
 
-    # Randomly initialised word embeddings
-    random_init_vocab = utils.get_vocab(training_data_list, config["vocab_size"], config["min_freq"])
-    random_init_embedding = nn.Embedding(
-        config["vocab_size"], config["word_embedding_dim"])
-    max_seq_length = config["max_seq_length"]
-    inputs = []
-    for text in training_question_list:
-        tokens = text.split()
-        indices = [random_init_vocab.get(token, random_init_vocab["<UNK>"]) for token in tokens]
-        if len(indices) < max_seq_length:
-            indices += [random_init_vocab["<PAD>"]] * (max_seq_length - len(indices))
-        indices = indices[:max_seq_length]
-        tensor = torch.tensor(indices)
-        inputs.append(tensor)
-    inputs = torch.stack(inputs)
-    random_init_embedded = random_init_embedding(inputs)
-    print(random_init_embedded.shape)
+    training_question_list, training_coarse_labels, training_fine_labels, training_max_sentence_length = parse_dataset(
+        config["training_dataset"])
+    validation_question_list, validation_coarse_labels, validation_fine_labels, validation_max_sentence_length = parse_dataset(
+        config["validation_dataset"])
+    max_seq_length = training_max_sentence_length
 
-    # Pre-trained word embeddings using GloVe
-    vocab, embeddings = [], []
-    with open(config["pretrained_glove"], 'rt', encoding='utf-8') as fi:
-        full_content = fi.read().strip().split('\n')
-    for i in range(len(full_content)):
-        i_word = full_content[i].split(' ')[0]
-        i_embeddings = [float(val) for val in full_content[i].split(' ')[1:]]
-        vocab.append(i_word)
-        embeddings.append(i_embeddings)
-
-    vocab_npa = np.array(vocab)
-    embs_npa = np.array(embeddings)
-
-    # insert '<pad>' and '<unk>' tokens at start of vocab_npa.
-    vocab_npa = np.insert(vocab_npa, 0, '<pad>')
-    vocab_npa = np.insert(vocab_npa, 1, '<unk>')
-    print(vocab_npa[:10])
-
-    # embedding for '<pad>' token.
-    pad_emb_npa = np.zeros((1, embs_npa.shape[1]))
-    # embedding for '<unk>' token.
-    unk_emb_npa = np.mean(embs_npa, axis=0, keepdims=True)
-
-    # insert embeddings for pad and unk tokens at top of embs_npa.
-    embs_npa = np.vstack((pad_emb_npa, unk_emb_npa, embs_npa))
-    print(embs_npa.shape)
-
-    my_embedding_layer = torch.nn.Embedding.from_pretrained(
-        torch.from_numpy(embs_npa).float())
-
-    assert my_embedding_layer.weight.shape == embs_npa.shape
-    print(my_embedding_layer.weight.shape)
+    # Creating a sentence representation based on the supplied configuration
+    sentence_rep = {}
+    if(config["model"] == "bow"):
+        if(config["embedding"] == "random"):
+            sentence_rep = get_randomly_initialised_bow(
+                training_question_list, config["min_freq"], config["word_embedding_dim"], max_seq_length, True)
+            print(sentence_rep)
+        else:
+            sentence_rep = get_pre_trained_bow(
+                training_question_list, config["pretrained_glove"], True)
+    else:
+        print("It's bilstm")
 
     # TODO: Validation data
     # test_data_list = parse_dataset(
