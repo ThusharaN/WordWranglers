@@ -82,7 +82,6 @@ and the following command to test the model:
 python3 question_classifier.py --test --config [configuration_file_path]
 ```
 
-Once training and testing of the model is complete, the environment can be deactivated by running the followig command in the terminal
-```sh
-source deactivate
-```
+## <u>Debugging the program</u>
+
+The program can be debugged using the VS Code debugger. The configurations have been added as part of the <i>.vscode/launch.json</i> file

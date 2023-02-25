@@ -44,8 +44,7 @@ def train(config_file):
 
     training_question_list, training_coarse_labels, training_fine_labels, training_max_sentence_length = parse_dataset(
         config["training_dataset"])
-    validation_question_list, validation_coarse_labels, validation_fine_labels, validation_max_sentence_length = parse_dataset(
-        config["validation_dataset"])
+    
     max_seq_length = training_max_sentence_length
 
     # Creating a sentence representation based on the supplied configuration
@@ -62,6 +61,5 @@ def train(config_file):
         print("It's bilstm")
 
     # TODO: Validation data
-    # test_data_list = parse_dataset(
-    #     constants.TESTING_DATA, question_list, fine_class_labels, coarse_class_labels, max_sentence_length)
-    # dataset_length(constants.TESTING_DATA, "test")
+    # validation_question_list, validation_coarse_labels, validation_fine_labels, validation_max_sentence_length = parse_dataset(
+    #     config["validation_dataset"])
