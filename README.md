@@ -8,52 +8,23 @@ git clone https://github.com/ThusharaN/WordWranglers.git
 The project can then be opened in Visual Studio Code or any other IDE.
 
 ## <u>Setting up the project</u>
-<b>Poetry</b> is used as a package management and dependency resolution tool to simplify the management of dependencies in this project. Make sure both poetry and pre-commit packages are installed before following the set-up instructions.
-```sh
-pip install poetry
-pip install pre-commit
-```
-Follow the below steps to create an initial setup for the project:
 
-Configuring poetry to make an env in the project
+Install all the necessary dependencies
+
 
 ```sh
-poetry config virtualenvs.in-project true
+python3 -m venv myvenv
 ```
-
-Create a new vitual environment using poetry
-
-```sh
-poetry install
-```
-
-Activating the environment
-
-```sh
-poetry shell
-```
-
-Install dependencies
 
 ```sh
 pip install -r requirements.txt
 ```
 
-Now install the precommit hooks by running this in the activated environment
-
-```sh
-pre-commit install
-```
-
-Select the interpreter with path <b>./.venv/bin/python</b> in VSCode.
-<br>![Alt text](/interpreter.png?raw=true "Title")
-
-Do a test run (after installing matplotlib) to check if the environment has been setup correctly
+Do a test run to check if the environment has been setup correctly
 
 ```sh
 python3 app/src/test_run.py
 ```
-<br>
 
 >**Note:** Instructions for installing git can be found [here](https://git-scm.com/downloads). Most Mac/Linux machines will have git pre-installed.
 
@@ -62,7 +33,6 @@ Dependencies can added to the current virtual environemt by running the followin
 ```sh
 pip install <package_name> && pip freeze > requirements.txt
 ```
-<br>
 
 >**Note:** Make sure you are insidethe virtual environment created by poetry before installing any dependencies
 
@@ -112,7 +82,6 @@ and the following command to test the model:
 python3 question_classifier.py --test --config [configuration_file_path]
 ```
 
-Once training and testing of the model is complete, the environment can be deactivated by running the followig command in the terminal
-```sh
-source deactivate
-```
+## <u>Debugging the program</u>
+
+The program can be debugged using the VS Code debugger. The configurations have been added as part of the <i>.vscode/launch.json</i> file

@@ -1,4 +1,6 @@
 # created by virtualenv automatically
 *cpython*
-*gitignore*
-app/data/glove.6B.50d.txt
+
+# Training and dev files need not be pushed to the repository
+*training.txt*
+*dev.txt*
