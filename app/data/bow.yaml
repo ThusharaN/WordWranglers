@@ -1,5 +1,5 @@
 model: bow
-embedding: random  # random, pretrained
+embedding: pretrained  # random, pretrained
 
 original_dataset: ./app/data/train_5500_label.txt
 split_ratio: 0.1
@@ -9,21 +9,7 @@ test_dataset: ./app/data/test.txt
 min_freq: 5
 word_embedding_dim: 300
 batch_size: 20
-
-
+epochs : 10
+coarse_classes: 6
+fine_classes: 50
 pretrained_glove: ./app/data/glove.small.txt
-
-# path_train : ../data/train.txt
-# path_dev : ../data/dev.txt path_test : ../data/test.txt classes: coarse
-# model : bow # bow, bilstm, bow_ensemble, bilstm_ensemble...
-# path_model : ../data/model.bow
-# early_stopping : 5
-# epoch : 10
-# lowercase : false
-# path_pre_emb : ../data/glove.txt
-# word_embedding_dim : 200 batch_size : 20
-# lr_param : 0.0001
-# path_eval_result : ../data/output.txt
-# model : bilstm_ensemble
-# ensemble_size : 5
-# path_model : ../data/model.bilstm_ensemble

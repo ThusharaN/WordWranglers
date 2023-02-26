@@ -137,7 +137,6 @@ STOP_WORDS = [
 def dataset_length(dataset, type):
     # Verifying the given dataset
     with open(dataset, "r", encoding="ISO-8859-1") as file:
-        print(file)
         line_count = 0
         for line in file:
             line_count += 1
@@ -147,6 +146,7 @@ def dataset_length(dataset, type):
 def parse_dataset(filename):
     # Parsing the given dataset to return list of questions, coarse and fine classes
     dataset = open(filename, "r", encoding="ISO-8859-1")
+    parsed_list = []
     question_list = []
     fine_class_labels = []
     coarse_class_labels = []
@@ -161,12 +161,14 @@ def parse_dataset(filename):
         question_list.append(question)
         coarse_class_labels.append(coarse_class)
         fine_class_labels.append(fine_class)
+        parsed_list.append((question, coarse_class))
     print(f"Maximum sentence: {max_sentence_length}")
-    return question_list, coarse_class_labels, fine_class_labels, max_sentence_length
+    return question_list, coarse_class_labels, fine_class_labels, max_sentence_length, parsed_list
 
 
 def get_randomly_initialised_bow(question_list, min_freq, word_embedding_dim, max_seq_length, remove_stopwords):
     # Randomly initialised word embeddings
+    print("Starting bag of words...")
     custom_vocab_index = {
         "#PAD#": 0,  # special token used for padding sequences
         "#UNK#": 1,  # special token used for out-of-vocabulary words
@@ -207,10 +209,8 @@ def get_randomly_initialised_bow(question_list, min_freq, word_embedding_dim, ma
         sent_idx_random.append(sent_indices_tensor)
     sent_idx_random = torch.stack(sent_idx_random)
     random_init_embedded = random_init_embedding(sent_idx_random)
-    print(random_init_embedded)
 
     # Create bag-of-words from randomly initialized embedding
-    print("Starting bag of words...")
     bow_random = {}
     for q in range(0, len(question_list)):
         #tokens = question_list[q].lower().split()
@@ -224,6 +224,7 @@ def get_randomly_initialised_bow(question_list, min_freq, word_embedding_dim, ma
 def get_pre_trained_bow(question_list, pretrained_glove, remove_stopwords):
     # Pre-trained word embeddings using GloVe
     # glove_vocab,glove_embeddings = [],[]
+    print("Starting GloVefor the given dataset...")
     emb_dict_glove_bow = {}
     bow_glove = {}
     with open(pretrained_glove, 'rt', encoding="ISO-8859-1") as pretrained_file:
@@ -233,8 +234,6 @@ def get_pre_trained_bow(question_list, pretrained_glove, remove_stopwords):
         word = pretrained_vectors[i].split('\t')[0]
         word_vector = [float(val)
                        for val in pretrained_vectors[i].split('\t')[1].split(' ')[0:]]
-        # glove_vocab.append(word)
-        # glove_embeddings.append(word_vector)
         emb_dict_glove_bow[word] = word_vector
     for q in question_list:
         tokens = q.lower().split()
@@ -247,3 +246,22 @@ def get_pre_trained_bow(question_list, pretrained_glove, remove_stopwords):
         sent_vec = torch.div(sent_vec, len(tokens))
         bow_glove[q] = sent_vec
     return bow_glove
+
+
+def get_randomly_initialised_bilstm(train_parsed_list, word_embedding_dim):
+    vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])
+    vocab.add("#UNK#")
+    vocab.add("#PAD#")
+    vocab_size = len(vocab)
+    word_to_idx = {word: i for i, word in enumerate(vocab)}
+    random_embeddings_bilstm = np.random.uniform(
+        -1, 1, (vocab_size, word_embedding_dim))
+    return word_to_idx, random_embeddings_bilstm
+
+
+def class_encoder(labels):
+    label_to_int = {}
+    for label in labels:
+        if label not in label_to_int:
+            label_to_int[label] = len(label_to_int)
+    return [label_to_int[label] for label in labels]
