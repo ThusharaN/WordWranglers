@@ -74,12 +74,23 @@ Fix all the conflicts in the files; add, commit and push.
 
 Run the following command in the console to train the model:
 ```sh
-python3 question_classifier.py --train --config [configuration_file_path]
+python3 question_classifier.py --train --config bow.yaml
+```
+or
+
+```sh
+python3 question_classifier.py --train --config bilstm.yaml
 ```
 
 and the following command to test the model:
 ```sh
-python3 question_classifier.py --test --config [configuration_file_path]
+python3 question_classifier.py --test --config bow.yaml
+```
+
+or
+
+```sh
+python3 question_classifier.py --test --config bilstm.yaml
 ```
 
 ## <u>Debugging the program</u>

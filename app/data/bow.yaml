@@ -8,8 +8,10 @@ validation_dataset: ./app/data/dev.txt
 test_dataset: ./app/data/test.txt
 min_freq: 5
 word_embedding_dim: 300
-batch_size: 20
+hidden_dim: 128
+batch_size: 5
 epochs : 10
 coarse_classes: 6
 fine_classes: 50
+predict_class: fine #  fine, coarse
 pretrained_glove: ./app/data/glove.small.txt

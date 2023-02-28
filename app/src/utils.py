@@ -1,7 +1,15 @@
-import string
+import random
 import torch.nn as nn
 import torch
 import numpy as np
+
+
+torch.manual_seed(1)
+torch.cuda.manual_seed(1)                                                                                                                              
+torch.cuda.manual_seed_all(1)                                                                                          
+np.random.seed(1)                                                                                                             
+random.seed(1) 
+
 
 STOP_WORDS = [
     "i",
@@ -131,8 +139,9 @@ STOP_WORDS = [
     "don",
     "should",
     "now",
-] + [punct for punct in string.punctuation]
+]
 
+PUNC = "!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
 
 def dataset_length(dataset, type):
     # Verifying the given dataset
@@ -143,7 +152,7 @@ def dataset_length(dataset, type):
     print(f"Number of lines in {type} dataset: {line_count}")
 
 
-def parse_dataset(filename):
+def parse_dataset(filename, prediction_class):
     # Parsing the given dataset to return list of questions, coarse and fine classes
     dataset = open(filename, "r", encoding="ISO-8859-1")
     parsed_list = []
@@ -161,8 +170,11 @@ def parse_dataset(filename):
         question_list.append(question)
         coarse_class_labels.append(coarse_class)
         fine_class_labels.append(fine_class)
-        parsed_list.append((question, coarse_class))
-    print(f"Maximum sentence: {max_sentence_length}")
+        if(prediction_class == "fine"):
+            parsed_list.append((question, fine_class))
+        else:
+            parsed_list.append((question, coarse_class))
+    print(f"Longest sentence in file {filename} is of length: {max_sentence_length}")
     return question_list, coarse_class_labels, fine_class_labels, max_sentence_length, parsed_list
 
 
@@ -224,12 +236,11 @@ def get_randomly_initialised_bow(question_list, min_freq, word_embedding_dim, ma
 def get_pre_trained_bow(question_list, pretrained_glove, remove_stopwords):
     # Pre-trained word embeddings using GloVe
     # glove_vocab,glove_embeddings = [],[]
-    print("Starting GloVefor the given dataset...")
+    print("Starting GloVe for the given dataset...")
     emb_dict_glove_bow = {}
     bow_glove = {}
     with open(pretrained_glove, 'rt', encoding="ISO-8859-1") as pretrained_file:
-        pretrained_vectors = pretrained_file.read().strip().split(
-            '\n')  # read().strip().split('\t')
+        pretrained_vectors = pretrained_file.read().strip().split('\n')  # read().strip().split('\t')
     for i in range(len(pretrained_vectors)):
         word = pretrained_vectors[i].split('\t')[0]
         word_vector = [float(val)
@@ -247,16 +258,29 @@ def get_pre_trained_bow(question_list, pretrained_glove, remove_stopwords):
         bow_glove[q] = sent_vec
     return bow_glove
 
+    
+def get_random_embeddings(vocab_size, embedding_size):
+    embeddings = np.random.uniform(-1, 1, (vocab_size, embedding_size))
+    return embeddings
 
-def get_randomly_initialised_bilstm(train_parsed_list, word_embedding_dim):
-    vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])
-    vocab.add("#UNK#")
-    vocab.add("#PAD#")
-    vocab_size = len(vocab)
-    word_to_idx = {word: i for i, word in enumerate(vocab)}
-    random_embeddings_bilstm = np.random.uniform(
-        -1, 1, (vocab_size, word_embedding_dim))
-    return word_to_idx, random_embeddings_bilstm
+
+def get_pretrained_embeddings(glove_path, embedding_size):
+    embeddings_glove_bow = []
+    emb_dict_glove_bow = {}
+    with open(glove_path,'rt', encoding='utf-8') as glove_file:
+        pretrained_vectors = glove_file.read().strip().split('\n')
+    for vector in range(len(pretrained_vectors)):
+        word = pretrained_vectors[vector].split("\t")[0]
+        word_vector = [float(val) for val in pretrained_vectors[vector].split('\t')[1].split(' ')[0:]]
+        embeddings_glove_bow.append(word_vector)
+        emb_dict_glove_bow[word] = word_vector
+    vector = 0
+    embeddings = np.zeros((len(emb_dict_glove_bow)+2, embedding_size)) 
+    for word in emb_dict_glove_bow.keys():
+        embeddings[vector] = emb_dict_glove_bow[word]
+        vector = vector + 1 
+    return embeddings
+
 
 
 def class_encoder(labels):
