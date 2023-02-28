@@ -12,11 +12,12 @@ from app.src.bow_classifier import Classifier
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score 
 
-torch.manual_seed(1)
-torch.cuda.manual_seed(1)                                                                                                                              
-torch.cuda.manual_seed_all(1)                                                                                          
-np.random.seed(1)                                                                                                             
-random.seed(1) 
+random.seed(1234)
+np.random.seed(1234)
+torch.manual_seed(1234)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(1234)  
+    torch.cuda.manual_seed_all(1234)
 
 def split_training_dataset(training_dataset, split_fraction, training_datapath, validation_datapath):
     # Split the given data set into training and vaidation sets with the given split condition

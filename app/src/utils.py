@@ -4,11 +4,12 @@ import torch
 import numpy as np
 
 
-torch.manual_seed(1)
-torch.cuda.manual_seed(1)                                                                                                                              
-torch.cuda.manual_seed_all(1)                                                                                          
-np.random.seed(1)                                                                                                             
-random.seed(1) 
+random.seed(1234)
+np.random.seed(1234)
+torch.manual_seed(1234)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(1234)  
+    torch.cuda.manual_seed_all(1234)
 
 
 STOP_WORDS = [
