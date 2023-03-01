@@ -6,3 +6,5 @@
 *dev.txt*
 *ipynb*
 *DS_Store*
+*.pickle*
+*.pt*

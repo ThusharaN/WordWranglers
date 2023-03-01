@@ -2,15 +2,14 @@ import os
 import random
 
 import numpy as np
-import torch.nn.functional as F
 import torch
 from app.src.bilstm_classifier import BiLSTMClassifier
-from app.src.dataset import QuestionDataset
-from app.src.utils import dataset_length, parse_dataset, get_randomly_initialised_bow, get_pre_trained_bow, class_encoder, get_random_embeddings, get_pretrained_embeddings
+from app.src.utils import dataset_length, parse_dataset, batch_prediction
 import yaml
-from app.src.bow_classifier import Classifier
+from app.src.bow_classifier import BoWClassifier
 from torch.utils.data import DataLoader
-from sklearn.metrics import f1_score 
+from app.src.dataset_mapper import DatasetMaper
+import pickle
 
 random.seed(1234)
 np.random.seed(1234)
@@ -18,6 +17,7 @@ torch.manual_seed(1234)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(1234)  
     torch.cuda.manual_seed_all(1234)
+
 
 def split_training_dataset(training_dataset, split_fraction, training_datapath, validation_datapath):
     # Split the given data set into training and vaidation sets with the given split condition
@@ -32,50 +32,43 @@ def split_training_dataset(training_dataset, split_fraction, training_datapath, 
     with open(training_datapath, "w", encoding="ISO-8859-1") as f:
         f.writelines(train_data)
 
-def model_preprocessing_bow(question_list, labels_encoded, seq_length, batch_size, shuffle):
-    words = [word for question in question_list for word in question.split()]
-    word2idx = {word: idx+2 for idx, word in enumerate(set(words))}
-    word2idx["#PAD#"] = 0
-    word2idx["#UNK#"] = 1
-    padded_questions = [question + " #PAD#" * (seq_length - len(
-        question.split())) for question in question_list]
-    padded_questions = list(set(padded_questions))
-    num_words = len(word2idx)+2
-    dataset = QuestionDataset(padded_questions, labels_encoded,  word2idx, seq_length)
-    dataloader = DataLoader(dataset, batch_size = batch_size, shuffle=shuffle)
-    return num_words, dataloader, dataset
 
-def batch_training_bow(sentence_rep, dataloader, epochs,  word_embedding_dim, hidden_dim, classes):
-    for epoch in range(epochs):
-        for batch_idx, (questions, labels) in enumerate(dataloader):
-            batch_sentence_rep = {key: sentence_rep[key.replace(" #PAD#", "")] for key in questions if isinstance(key, str)}
-            question_tensor = [v.tolist() for v in batch_sentence_rep.values()]
-            question_tensor = np.array(question_tensor)
-            model = Classifier(question_tensor, word_embedding_dim, hidden_dim, classes)
-            
-            #optimizer = torch.optim.Adam(model.parameters())
-            output = model(question_tensor)
-            #optimizer.zero_grad()
-            loss = torch.nn.functional.cross_entropy(output, labels)
+def class_encoder(labels):
+    coarse_cls_idx = {}
+    idx = 0
+    for w in set(labels):
+        coarse_cls_idx[w] = idx
+        idx = idx + 1
+    return [coarse_cls_idx.get(cls) for cls in labels]
+
+
+def batch_training_bow(epochs,  batch_size, train_sent_vec_list, labels_encoded, learning_rate, model):
+    training_set = DatasetMaper(train_sent_vec_list, labels_encoded)
+    loader_training = DataLoader(training_set, batch_size=batch_size)
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    for epoch in range(epochs):   
+        for i, (inputs, labels) in enumerate(loader_training):  
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            optimizer.zero_grad()
             loss.backward()
-            #optimizer.step()
-            print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'
-                .format(epoch + 1, epochs, batch_idx + 1, len(dataloader), loss.item()))
-    return model
+            optimizer.step()
+            print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, epochs, i + 1, len(loader_training), loss.item()))
 
-def batch_validation_bow(test_dataloader, test_dataset, validation_sentence_rep, model):
-    preds = []
-    for _, (_, _,) in enumerate(test_dataloader):
-        question_tensor = torch.stack(
-            [v for v in validation_sentence_rep.values() if isinstance(v, torch.Tensor)])
-        with torch.no_grad():
-            output = model(question_tensor)
-            pred = F.softmax(output, dim=1).argmax(dim=1)
-            # pred = output.argmax(dim = 1)
-        preds.extend(pred.tolist())
-    correct = sum([1 for i in range(len(test_dataset)) if preds[i] == test_dataset[i][1]])
-    accuracy = correct / len(test_dataset)
-    return accuracy
+
+def get_pretrained_embeddings(glove_path):
+    embeddings_glove_bow = []
+    emb_dict_glove_bow = {}
+    with open(glove_path,'rt', encoding='utf-8') as glove_file:
+        pretrained_vectors = glove_file.read().strip().split('\n')
+    for vector in range(len(pretrained_vectors)):
+        word = pretrained_vectors[vector].split("\t")[0]
+        word_vector = [float(val) for val in pretrained_vectors[vector].split('\t')[1].split(' ')[0:]]
+        embeddings_glove_bow.append(word_vector)
+        emb_dict_glove_bow[word] = word_vector
+    return emb_dict_glove_bow, embeddings_glove_bow
+
 
 def batch_training_bilstm(epochs, batch_size, train_parsed_list, word_to_idx, classes, learning_rate, model, max_sequence_length):
     optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
@@ -93,25 +86,20 @@ def batch_training_bilstm(epochs, batch_size, train_parsed_list, word_to_idx, cl
             print(f"Epoch: {epoch+1}/{epochs} | Batch: {i//batch_size+1}/{len(train_parsed_list)//batch_size+1} | Loss: {loss.item():.4f}")
 
 
-def batch_validation_bilstm(validation_parsed_list, word_to_idx, model, classes, max_sequence_length):
-    batch_size = 1
-    pred_cls_list = []
-    true_cls_list = []
-    with torch.no_grad():
-        num_correct = 0
-        for i in range(0, len(validation_parsed_list), batch_size):
-            batch = validation_parsed_list[i:i+batch_size]
-            inputs = [[word_to_idx.get(word, word_to_idx["#UNK#"]) for word in sentence.lower().split()] for sentence, _ in batch]
-            inputs = [x + [word_to_idx["#PAD#"]]*(max_sequence_length-len(x)) for x in inputs]
-            output = model(torch.LongTensor(inputs))
-            ot = F.softmax(output, dim = 1).argmax(dim = 1)
-            pred_cls = classes[ot]
-            if pred_cls == validation_parsed_list[i][1]:
-                num_correct += 1
-            print(f"Sentence: {validation_parsed_list[i][0]} | Predicted class: {pred_cls} | True class: {validation_parsed_list[i][1]}")
-            pred_cls_list.append(pred_cls)
-            true_cls_list.append(validation_parsed_list[i][1])
-        print(f"\nF1 score with the validation set is: {f1_score(true_cls_list, pred_cls_list, average='micro'):.2f}")
+def persist_configurations(model, word_indices, train_classes, training_max_sentence_length, config):
+    with open(config["model_path"], "wb") as bilstm_path:
+            pickle.dump(model, bilstm_path, protocol=pickle.DEFAULT_PROTOCOL)
+
+    with open(config["word_indices"], "wb") as word_indices_path:
+            pickle.dump(word_indices, word_indices_path, protocol=pickle.DEFAULT_PROTOCOL)
+
+    with open(config["training_classes"], "wb") as training_classes_path:
+            pickle.dump(train_classes, training_classes_path, protocol=pickle.DEFAULT_PROTOCOL)
+
+    with open(config["metadata"], "wb") as metadata_path:
+            pickle.dump(training_max_sentence_length, metadata_path, protocol=pickle.DEFAULT_PROTOCOL)
+    
+    print("\nAll configurations persisted successfully for testing")
 
 def train(config_file):
     with open(
@@ -133,85 +121,128 @@ def train(config_file):
 
     training_question_list, training_coarse_labels, training_fine_labels, training_max_sentence_length, train_parsed_list = parse_dataset(
         config["training_dataset"], config["predict_class"])
+
     training_coarse_labels_encoded = class_encoder(training_coarse_labels)
     training_fine_labels_encoded = class_encoder(training_fine_labels)
 
-    validation_question_list, validation_coarse_labels, validation_fine_labels, validation_max_sentence_length, validation_parsed_list = parse_dataset(
+    _, _, _, _, validation_parsed_list = parse_dataset(
         config["validation_dataset"], config["predict_class"])
-    validation_coarse_labels_encoded = class_encoder(validation_coarse_labels)
-    validation_fine_labels_encoded = class_encoder(validation_fine_labels)
-    
-    vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])    
-    word_indices = {word: index + 2 for index, word in enumerate(vocab)}
-    word_indices["#PAD#"] = 0
-    word_indices["#UNK#"] = 1
-    vocab_size = len(word_indices)
 
-    # training_max_seq_length = training_max_sentence_length
-    # validation_max_seq_length = validation_max_sentence_length
+    _, _, _, _, testing_parsed_list = parse_dataset(config["test_dataset"], config["predict_class"])
 
-    # TODO: Check with training_max_sentence_length & validation_max_sentence_length
-    training_max_seq_length = 40
-    validation_max_seq_length = 40
 
     # Train & validate the model either on fine or coarse classes
     if(config["predict_class"]=="fine"):
         num_classes = config["fine_classes"]
         train_classes = list(set(training_fine_labels))
-        validation_classes = list(set(validation_fine_labels))
+        labels_encoded = training_fine_labels_encoded
     else:
         num_classes = config["coarse_classes"]
         train_classes = list(set(training_coarse_labels))
-        validation_classes = list(set(validation_coarse_labels))
+        labels_encoded = training_coarse_labels_encoded
 
-    # Creating a sentence representation based on the supplied configuration
-    sentence_rep = {}
+
+# **************************************************** BoW begins ******************************************************************
     if(config["model"] == "bow"):
-        print("It's Bag-Of-Words")
+        print("\nIt's Bag-Of-Words")
         if(config["embedding"] == "random"):
-            sentence_rep = get_randomly_initialised_bow(training_question_list, config["min_freq"], config["word_embedding_dim"], training_max_seq_length, True)
-            validation_sentence_rep = get_randomly_initialised_bow(validation_question_list, config["min_freq"], config["word_embedding_dim"], validation_max_seq_length, True)
+            custom_vocab_list = []
+            custom_vocab_count = {}
+            word_indices = {
+                "#PAD#": 0,
+                "#UNK#": 1,
+            } 
+            for ques in training_question_list:
+                custom_vocab_list = custom_vocab_list + ques.lower().split(' ')
+            for i in custom_vocab_list:
+                if i not in list(custom_vocab_count.keys()):
+                    custom_vocab_count[i] = 1
+                else:
+                    custom_vocab_count[i] = custom_vocab_count[i] + 1
+            custom_vocab_count_frequency = {k: v for k, v in custom_vocab_count.items() if v >= config["min_freq"]}
+            idx_counter = 2
+            for w in custom_vocab_count_frequency.keys():
+                word_indices[w] = idx_counter
+                idx_counter = idx_counter + 1
+            sent_idx_random = []
+            for q in training_question_list:
+                tokens = q.lower().split()
+                sent_indices = [word_indices.get(token, word_indices["#UNK#"]) for token in tokens]    
+                if len(sent_indices) < training_max_sentence_length:
+                    sent_indices += [word_indices["#PAD#"]] * (training_max_sentence_length - len(sent_indices))
+                sent_indices_tensor = torch.tensor(sent_indices)
+                sent_idx_random.append(sent_indices_tensor)
+            embeddings = torch.randn(len(word_indices), config["word_embedding_dim"])
         else:
-            sentence_rep = get_pre_trained_bow(training_question_list, config["pretrained_glove"], True)
-            validation_sentence_rep = get_pre_trained_bow(validation_question_list, config["pretrained_glove"], True)
+            emb_dict_glove_bow, embeddings = get_pretrained_embeddings(config["pretrained_glove"])
+            zeroes = [0 for i in range(0, 300)]
+            embeddings.append(zeroes)
+            word_indices = {}
+            idx_counter = 0
+            sent_idx_random = []
 
-        print("Training the model...")
-        if(config["predict_class"]=="fine"):
-            labels_encoded = training_fine_labels_encoded
-        else:
-            labels_encoded = training_coarse_labels_encoded
-        _, dataloader, _ = model_preprocessing_bow(training_question_list, labels_encoded,
-                                                           training_max_seq_length, config["batch_size"], True)
+            for word in list(emb_dict_glove_bow.keys()):
+                word_indices[word] = idx_counter
+                idx_counter = idx_counter + 1
+            word_indices["#PAD#"] = idx_counter
+            
+            for q in training_question_list:
+                tokens = q.lower().split()
+                sent_indices = [word_indices.get(token, word_indices["#UNK#"]) for token in tokens]    
+                if len(sent_indices) < training_max_sentence_length:
+                    sent_indices += [word_indices["#PAD#"]] * (training_max_sentence_length - len(sent_indices))
+                sent_idx_random.append(sent_indices)
+            sent_idx_random = torch.tensor(sent_idx_random)
 
-        model = batch_training_bow(sentence_rep, dataloader, config["epochs"],  config["word_embedding_dim"], config["hidden_dim"], num_classes)
 
-        print("Validating the model...")
-        if(config["predict_class"]=="fine"):
-            labels_encoded = validation_fine_labels_encoded
-        else:
-            labels_encoded = validation_coarse_labels_encoded
-        model.eval()
-        _, test_dataloader, test_dataset = model_preprocessing_bow(validation_question_list, labels_encoded,
-                                                                   validation_max_seq_length, 1, False)
-        coarse_acc, fine_acc = batch_validation_bow(test_dataloader, test_dataset, validation_sentence_rep, model)
-        print('Coarse class accuracy: {:.2%}, Fine class accuracy: {:.2%}'.format(coarse_acc, fine_acc))
+    # ***************************************** BoW model training begins ****************************************************
+
+        model = BoWClassifier(config["word_embedding_dim"], config["hidden_dim"], num_classes,
+                                  embeddings, word_indices["#PAD#"])
+
+        print("\nTraining the model...")
+        batch_training_bow(config["epochs"], config["batch_size"], sent_idx_random,
+                            labels_encoded, config["learning_rate"], model)
+
+    # ***************************************** BoW model training ends ******************************************************
+
+# **************************************************** BoW ends ******************************************************************
+
+
+# ************************************************* BiLSTM begins ****************************************************************
     else:
-        print("It's BiLSTM")
-        # TODO: Move this code above so that the embeddings can be used for both bow & bilstm
+        print("\nIt's BiLSTM")
+        vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])    
+        word_indices = {word: index + 2 for index, word in enumerate(vocab)}
+        word_indices["#PAD#"] = 0
+        word_indices["#UNK#"] = 1
+        vocab_size = len(word_indices)
+
         if(config["embedding"] == "random"):
-            embeddings = get_random_embeddings(vocab_size, config["word_embedding_dim"])
+            embeddings = np.random.uniform(-1, 1, (vocab_size, config["word_embedding_dim"]))
         else:
-            embeddings = get_pretrained_embeddings(config["pretrained_glove"], config["word_embedding_dim"])
+            emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"])
+            embeddings = np.zeros((len(emb_dict_glove_bow)+2, config["word_embedding_dim"])) 
+            i = 0
+            for word in emb_dict_glove_bow.keys():
+                embeddings[i] = emb_dict_glove_bow[word]
+                i = i + 1 
+
+        
+    # ***************************************** BiLSTM model training begins **************************************************
 
         model = BiLSTMClassifier(config["word_embedding_dim"], config["hidden_dim"], num_classes,
                                  torch.FloatTensor(embeddings), config["freeze_embeddings"])
 
-        print("Training the model...")
+        print("\nTraining the model...")
         batch_training_bilstm(config["epochs"], config["batch_size"], train_parsed_list, word_indices,
-                              train_classes, config["learning_rate"], model, training_max_seq_length)
-
-        print("Validating the model...") 
-        batch_validation_bilstm(validation_parsed_list, word_indices, model,
-                                train_classes, validation_max_seq_length)
-
+                              train_classes, config["learning_rate"], model, training_max_sentence_length)
         
+    # ***************************************** BiLSTM model training ends ****************************************************
+
+# **************************************************** BiLSTM ends **************************************************************
+
+    print("\nValidating the model...") 
+    batch_prediction(validation_parsed_list, word_indices, model, train_classes, training_max_sentence_length, "validation")
+
+    persist_configurations(model, word_indices, train_classes, training_max_sentence_length, config)
