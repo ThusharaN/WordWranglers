@@ -1,19 +1,28 @@
-model: bilstm
-embedding: random
+# Training context; "model" is not to be updated
+model: bilstm 
+embedding: random     # random or pretrained
+predict_class: coarse # fine or coarse
 
+# Dataset paths
 original_dataset: ./app/data/train_5500_label.txt
-split_ratio: 0.1
 training_dataset: ./app/data/training.txt
 validation_dataset: ./app/data/dev.txt
 test_dataset: ./app/data/test.txt
-min_freq: 5
+pretrained_glove: ./app/data/glove.small.txt
+
+# Configurations for bilstm
+split_ratio: 0.1
 word_embedding_dim: 300
-batch_size: 8
-epochs : 5
-freeze_embeddings: True
 hidden_dim: 128
-output_dim: 6
-learning_rate: 0.001
 coarse_classes: 6
 fine_classes: 50
-pretrained_glove: ./app/data/glove.small.txt
+batch_size: 8
+epochs : 10
+freeze_embeddings: False
+learning_rate: 0.001
+
+# Paths to persist the configurations for testing
+model_path: ./app/data/model.pickle
+word_indices: ./app/data/words.pickle
+training_classes: ./app/data/classes.pickle
+metadata: ./app/data/metadata.pickle
