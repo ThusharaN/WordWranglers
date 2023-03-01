@@ -128,8 +128,6 @@ def train(config_file):
     _, _, _, _, validation_parsed_list = parse_dataset(
         config["validation_dataset"], config["predict_class"])
 
-    _, _, _, _, testing_parsed_list = parse_dataset(config["test_dataset"], config["predict_class"])
-
 
     # Train & validate the model either on fine or coarse classes
     if(config["predict_class"]=="fine"):
