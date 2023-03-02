@@ -1,7 +1,7 @@
 import argparse
 
-from app.src.testing import test
-from app.src.training import train
+from training import train
+from testing import test
 
 if __name__ == "__main__":
     print("Starting the word wrangler....")

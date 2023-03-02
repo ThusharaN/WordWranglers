@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 
+
 class DatasetMaper(Dataset):
 
     def __init__(self, x, y):

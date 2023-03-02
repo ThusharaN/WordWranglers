@@ -3,12 +3,12 @@ import random
 
 import numpy as np
 import torch
-from app.src.bilstm_classifier import BiLSTMClassifier
-from app.src.utils import dataset_length, parse_dataset, batch_prediction
+from bilstm_classifier import BiLSTMClassifier
+from utils import dataset_length, parse_dataset, batch_prediction
 import yaml
-from app.src.bow_classifier import BoWClassifier
+from bow_classifier import BoWClassifier
 from torch.utils.data import DataLoader
-from app.src.dataset_mapper import DatasetMaper
+from dataset_mapper import DatasetMaper
 import pickle
 
 random.seed(1234)
@@ -80,7 +80,7 @@ def batch_training_bilstm(epochs, batch_size, train_parsed_list, word_to_idx, cl
             targets = torch.LongTensor([classes.index(cls) for _, cls in batch])
             optimizer.zero_grad()
             outputs = model(torch.LongTensor(inputs))
-            loss = torch.nn.CrossEntropyLoss()(outputs, targets)
+            loss = torch.nn.CrossEntropyLoss()(outputs, targets) 
             loss.backward()
             optimizer.step()
             print(f"Epoch: {epoch+1}/{epochs} | Batch: {i//batch_size+1}/{len(train_parsed_list)//batch_size+1} | Loss: {loss.item():.4f}")
@@ -99,11 +99,11 @@ def persist_configurations(model, word_indices, train_classes, training_max_sent
     with open(config["metadata"], "wb") as metadata_path:
             pickle.dump(training_max_sentence_length, metadata_path, protocol=pickle.DEFAULT_PROTOCOL)
     
-    print("\nAll configurations persisted successfully for testing")
+    print("\nAll configurations persisted successfully for testing\n")
 
 def train(config_file):
     with open(
-        os.getcwd() + "/app/data/" + config_file, "r", encoding="ISO-8859-1"
+        os.getcwd().replace("src","data/") + config_file, "r", encoding="ISO-8859-1"
     ) as configurations:
         config = yaml.load(configurations, Loader=yaml.Loader)
 
