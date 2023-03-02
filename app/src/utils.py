@@ -55,6 +55,7 @@ def batch_prediction(validation_parsed_list, word_to_idx, model, classes, max_se
     true_cls_list = []
     with torch.no_grad():
         num_correct = 0
+        total_loss = 0
         for i in range(0, len(validation_parsed_list), batch_size):
             batch = validation_parsed_list[i:i+batch_size]
             inputs = [[word_to_idx.get(word, word_to_idx["#UNK#"]) for word in sentence.lower().split()] for sentence, _ in batch]
@@ -62,9 +63,14 @@ def batch_prediction(validation_parsed_list, word_to_idx, model, classes, max_se
             output = model(torch.LongTensor(inputs))
             ot = F.softmax(output, dim = 1).argmax(dim = 1)
             pred_cls = classes[ot]
+            targets = torch.LongTensor([classes.index(cls) for _, cls in batch])
+            loss = torch.nn.CrossEntropyLoss()(output, targets)
+            total_loss += loss.item()
             if pred_cls == validation_parsed_list[i][1]:
                 num_correct += 1
             print(f"Sentence: {validation_parsed_list[i][0]} | Predicted class: {pred_cls} | True class: {validation_parsed_list[i][1]}")
             pred_cls_list.append(pred_cls)
             true_cls_list.append(validation_parsed_list[i][1])
+    print(f"\nAccuracy during {mode} is: {num_correct / len(validation_parsed_list):.2f}")
+    print(f"\nAverage Loss during {mode} is: {total_loss / len(validation_parsed_list):.2f}")
     print(f"\nF1 score during {mode} is: {f1_score(true_cls_list, pred_cls_list, average='micro'):.2f}")
