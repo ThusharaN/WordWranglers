@@ -1,7 +1,7 @@
 import os
 
 import yaml
-from app.src.utils import dataset_length, parse_dataset, batch_prediction
+from utils import dataset_length, parse_dataset, batch_prediction
 import torch
 import pickle
 import random
@@ -15,7 +15,7 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(1234)
 
 def test(config_file):
-    with open(os.getcwd() + "/app/data/" + config_file, "r", encoding="ISO-8859-1") as configurations:
+    with open(os.getcwd().replace("src","data/") + config_file, "r", encoding="ISO-8859-1") as configurations:
         config = yaml.load(configurations, Loader=yaml.Loader)
 
     dataset_length(config["test_dataset"], "testing")

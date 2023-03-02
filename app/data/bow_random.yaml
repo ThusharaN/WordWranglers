@@ -1,0 +1,29 @@
+# Training context; "model" & "embedding" are not to be updated
+model: bow
+embedding: random
+predict_class: coarse #  fine, coarse
+
+# Dataset paths
+original_dataset: ../data/train_5500_label.txt
+training_dataset: ../data/training.txt
+validation_dataset: ../data/dev.txt
+test_dataset: ../data/test.txt
+pretrained_glove: ../data/glove.small.txt
+
+
+# Configurations for bow
+split_ratio: 0.1
+min_freq: 5
+word_embedding_dim: 300
+hidden_dim: 64
+coarse_classes: 6
+fine_classes: 50
+batch_size: 5
+epochs : 10
+learning_rate: 0.001
+
+# Paths to persist the configurations for testing
+model_path: ../data/model.pickle
+word_indices: ../data/words.pickle
+training_classes: ../data/classes.pickle
+metadata: ../data/metadata.pickle

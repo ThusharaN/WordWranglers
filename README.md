@@ -72,26 +72,27 @@ Fix all the conflicts in the files; add, commit and push.
 
 ## <u>Running the program</u>
 
+Since the classifier script resides within the <i>src</i> folder of the repository, make sure to move into this folder before running the train and/or test commands
+```sh
+cd WordWranglers/app/src
+```
+
 Run the following command in the console to train the model:
 ```sh
-python3 question_classifier.py --train --config bow.yaml
-```
-or
-
-```sh
-python3 question_classifier.py --train --config bilstm.yaml
+python3 question_classifier.py --train --config [config_file_name]
 ```
 
 and the following command to test the model:
 ```sh
-python3 question_classifier.py --test --config bow.yaml
+python3 question_classifier.py --test --config [config_file_name]
 ```
 
-or
+The placeholder <i>[config_file_name]</i> can be any of the following files to train and test the model with different configurations:
+- <b>bilstm_pretrained.yaml</b>: Train the test classifier with pretrained word embeddings using GloVe with the sentence representation given by BiLSTM
+- <b>bilstm_random.yaml</b>: Train the test classifier with randomly generated word embeddings with the sentence representation given by BiLSTM
+- <b>bow_pretrained.yaml</b>: Train the test classifier with pretrained word embeddings using GloVe with the sentence representation given by Bag-Of-Words (or BoW)
+- <b>bow_random.yaml</b>: Train the test classifier with randomly generated word embeddings with the sentence representation given by Bag-Of-Words (or BoW)
 
-```sh
-python3 question_classifier.py --test --config bilstm.yaml
-```
 
 ## <u>Debugging the program</u>
 

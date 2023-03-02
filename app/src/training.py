@@ -3,12 +3,12 @@ import random
 
 import numpy as np
 import torch
-from app.src.bilstm_classifier import BiLSTMClassifier
-from app.src.utils import dataset_length, parse_dataset, batch_prediction
+from bilstm_classifier import BiLSTMClassifier
+from utils import dataset_length, parse_dataset, batch_prediction
 import yaml
-from app.src.bow_classifier import BoWClassifier
+from bow_classifier import BoWClassifier
 from torch.utils.data import DataLoader
-from app.src.dataset_mapper import DatasetMaper
+from dataset_mapper import DatasetMaper
 import pickle
 
 random.seed(1234)
@@ -103,7 +103,7 @@ def persist_configurations(model, word_indices, train_classes, training_max_sent
 
 def train(config_file):
     with open(
-        os.getcwd() + "/app/data/" + config_file, "r", encoding="ISO-8859-1"
+        os.getcwd().replace("src","data/") + config_file, "r", encoding="ISO-8859-1"
     ) as configurations:
         config = yaml.load(configurations, Loader=yaml.Loader)
 
