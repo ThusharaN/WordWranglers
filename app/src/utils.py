@@ -14,7 +14,7 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(1234)
 
 
-STOP_WORDS = [punct for punct in string.punctuation]
+PUNCTUATIONS = [punct for punct in string.punctuation]
 
 
 def dataset_length(dataset, type):
@@ -41,6 +41,8 @@ def parse_dataset(filename, prediction_class):
         coarse_class = line[0].split(":")[0]
         fine_class = line[0].split(":")[1]
         question = " ".join(line[1:])
+        for punctuation in PUNCTUATIONS:
+            question = question.replace(punctuation, "")
         question_list.append(question)
         coarse_class_labels.append(coarse_class)
         fine_class_labels.append(fine_class)

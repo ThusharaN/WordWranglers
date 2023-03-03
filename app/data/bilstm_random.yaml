@@ -20,7 +20,7 @@ batch_size: 8
 epochs : 10
 freeze_embeddings: False
 learning_rate: 0.001
-remove_stopwords: True
+preprocessing_required: True
 
 # Paths to persist the configurations for testing
 model_path: ../data/model.pickle
