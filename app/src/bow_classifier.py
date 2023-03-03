@@ -1,10 +1,19 @@
 import torch.nn as nn
 import torch
+import random
+import numpy as np
+
+random.seed(1234)
+np.random.seed(1234)
+torch.manual_seed(1234)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(1234)  
+    torch.cuda.manual_seed_all(1234)
 
 class BoWClassifier(torch.nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, embeddings, padding_token):
+    def __init__(self, input_size, hidden_size, output_size, embeddings, padding_token, freeze_embeddings):
         super(BoWClassifier, self).__init__()
-        self.embedded = nn.Embedding.from_pretrained(torch.FloatTensor(embeddings), freeze=True, padding_idx=padding_token)
+        self.embedded = nn.Embedding.from_pretrained(torch.FloatTensor(embeddings), freeze=freeze_embeddings, padding_idx=padding_token)
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, output_size)

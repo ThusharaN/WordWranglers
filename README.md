@@ -92,6 +92,7 @@ The placeholder <i>[config_file_name]</i> can be any of the following files to t
 - <b>bilstm_random.yaml</b>: Train the test classifier with randomly generated word embeddings with the sentence representation given by BiLSTM
 - <b>bow_pretrained.yaml</b>: Train the test classifier with pretrained word embeddings using GloVe with the sentence representation given by Bag-Of-Words (or BoW)
 - <b>bow_random.yaml</b>: Train the test classifier with randomly generated word embeddings with the sentence representation given by Bag-Of-Words (or BoW)
+- <b>ensemble.yaml</b>: Train the test classifier with pretrained word embeddings using GloVe with the sentence representation given by an ensemble learner which utilisez both LSTM and Bag-Of-Words
 
 
 ## <u>Debugging the program</u>

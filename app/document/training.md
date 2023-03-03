@@ -32,7 +32,7 @@ This file defines a series of functions to train a text classifier. The function
 
 <b><i>train</i></b>
 - Main entry point for the script
-- Loads the configuration file specified by the config_file argument, reads in the training data, trains the specified model, and saves the trained model and metadata to disk
-- Calls the functions mentioned earlier to complete the training and validation of the classifier and persist it
+- Loads the configuration file specified by the supplied argument, reads in the training data, trains the specified model, and saves the trained model and metadata to the disk
+- Calls the functions mentioned earlier to complete the training and validation of the classifier and persist the configurations
 
 >**Note:** The code also sets the random seed for reproducibility and checks if a GPU is available to use.
