@@ -11,11 +11,6 @@ The project can then be opened in Visual Studio Code or any other IDE.
 
 Install all the necessary dependencies
 
-
-```sh
-python3 -m venv myvenv
-```
-
 ```sh
 pip install -r requirements.txt
 ```
