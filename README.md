@@ -34,8 +34,6 @@ Dependencies can added to the current virtual environemt by running the followin
 pip install <package_name> && pip freeze > requirements.txt
 ```
 
->**Note:** Make sure you are insidethe virtual environment created by poetry before installing any dependencies
-
 ## <u>Making changes</u>
 A pull request needs to be created in order to push any changes to code.
 
