@@ -1,9 +1,6 @@
 # created by virtualenv automatically
 *cpython*
 
-# Training and dev files need not be pushed to the repository
-*training.txt*
-*dev.txt*
 *ipynb*
 *DS_Store*
 *.pickle*
