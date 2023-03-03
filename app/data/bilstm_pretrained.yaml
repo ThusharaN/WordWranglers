@@ -1,7 +1,7 @@
 # Training context; "model" & "embedding" are not to be updated
 model: bilstm 
 embedding: pretrained
-predict_class: fine # fine or coarse
+predict_class: coarse # fine or coarse
 
 # Dataset paths
 original_dataset: ../data/train_5500_label.txt
@@ -20,7 +20,7 @@ batch_size: 8
 epochs : 10
 freeze_embeddings: False
 learning_rate: 0.001
-remove_stopwords: True
+preprocessing_required: True
 
 # Paths to persist the configurations for testing
 model_path: ../data/model.pickle
