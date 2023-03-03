@@ -1,4 +1,4 @@
-# BiLSTMClassifier
+# BiLSTM Classifier
 
 <b>BiLSTMClassifier</b> class, a subclass of <b>nn.Module</b>, is used to define a neural network model that acts as a question classifier, specifically when BiLSTM is used to generate the sentence representation
 
@@ -15,3 +15,5 @@ The <i><b>forward</b></i> method takes takes a batch of input sequences and retu
 - The last hidden state of the forward and backward LSTMs is concatenated
 - A ReLU activation function is applied to the concatenated hidden state
 - The resulting vector is passed through the final complete linear layer to obtain the output.
+
+>**Note:** The code also sets the random seed for reproducibility and checks if a GPU is available to use.

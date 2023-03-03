@@ -20,6 +20,7 @@ coarse_classes: 6
 fine_classes: 50
 batch_size: 5
 epochs : 10
+freeze_embeddings: False
 learning_rate: 0.001
 
 # Paths to persist the configurations for testing

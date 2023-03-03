@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import random
-import numpy as np
+import numpy as np 
 
 
 random.seed(1234)

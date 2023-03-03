@@ -7,6 +7,7 @@ from bilstm_classifier import BiLSTMClassifier
 from utils import dataset_length, parse_dataset, batch_prediction
 import yaml
 from bow_classifier import BoWClassifier
+from ensemble_classifier import EnsembleClassifier
 from torch.utils.data import DataLoader
 from dataset_mapper import DatasetMaper
 import pickle
@@ -196,7 +197,7 @@ def train(config_file):
     # ***************************************** BoW model training begins ****************************************************
 
         model = BoWClassifier(config["word_embedding_dim"], config["hidden_dim"], num_classes,
-                                  embeddings, word_indices["#PAD#"])
+                                  embeddings, word_indices["#PAD#"], config["freeze_embeddings"])
 
         print("\nTraining the model...")
         batch_training_bow(config["epochs"], config["batch_size"], sent_idx_random,
@@ -207,8 +208,9 @@ def train(config_file):
 # **************************************************** BoW ends ******************************************************************
 
 
+
 # ************************************************* BiLSTM begins ****************************************************************
-    else:
+    elif(config["model"] == "bilstm"):
         print("\nIt's BiLSTM")
         vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])    
         word_indices = {word: index + 2 for index, word in enumerate(vocab)}
@@ -227,7 +229,7 @@ def train(config_file):
                 i = i + 1 
 
         
-    # ***************************************** BiLSTM model training begins **************************************************
+        # ***************************************** BiLSTM model training begins **************************************************
 
         model = BiLSTMClassifier(config["word_embedding_dim"], config["hidden_dim"], num_classes,
                                  torch.FloatTensor(embeddings), config["freeze_embeddings"])
@@ -236,9 +238,36 @@ def train(config_file):
         batch_training_bilstm(config["epochs"], config["batch_size"], train_parsed_list, word_indices,
                               train_classes, config["learning_rate"], model, training_max_sentence_length)
         
-    # ***************************************** BiLSTM model training ends ****************************************************
+    # ***************************************** BiLSTM model training ends *****************************************************
 
-# **************************************************** BiLSTM ends **************************************************************
+# **************************************************** BiLSTM ends *************************************************************
+
+
+
+# *************************************************** Ensemble begins **********************************************************
+    else:
+        print("It's ensemble learning!")
+        vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])    
+        word_indices = {word: index + 2 for index, word in enumerate(vocab)}
+        word_indices["#PAD#"] = 0
+        word_indices["#UNK#"] = 1
+        vocab_size = len(word_indices)
+
+        emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"])
+        embeddings = np.zeros((len(emb_dict_glove_bow)+2, config["word_embedding_dim"])) 
+        i = 0
+        for word in emb_dict_glove_bow.keys():
+            embeddings[i] = emb_dict_glove_bow[word]
+            i = i + 1 
+
+        model = EnsembleClassifier(config["word_embedding_dim"], config["hidden_dim"], num_classes,
+                                 torch.FloatTensor(embeddings), config["freeze_embeddings"], word_indices["#PAD#"])
+
+        print("\nTraining the model...")
+        batch_training_bilstm(config["epochs"], config["batch_size"], train_parsed_list, word_indices,
+                              train_classes, config["learning_rate"], model, training_max_sentence_length)
+
+# *************************************************** Ensemble ends **********************************************************
 
     print("\nValidating the model...") 
     batch_prediction(validation_parsed_list, word_indices, model, train_classes, training_max_sentence_length, "validation")
