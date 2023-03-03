@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from sklearn.metrics import f1_score
 import torch.nn.functional as F
+import string
 
 
 random.seed(1234)
@@ -11,6 +12,9 @@ torch.manual_seed(1234)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(1234)  
     torch.cuda.manual_seed_all(1234)
+
+
+STOP_WORDS = [punct for punct in string.punctuation]
 
 
 def dataset_length(dataset, type):
@@ -73,4 +77,4 @@ def batch_prediction(validation_parsed_list, word_to_idx, model, classes, max_se
             true_cls_list.append(validation_parsed_list[i][1])
     print(f"\nAccuracy during {mode} is: {num_correct / len(validation_parsed_list):.2f}")
     print(f"\nAverage Loss during {mode} is: {total_loss / len(validation_parsed_list):.2f}")
-    print(f"\nF1 score during {mode} is: {f1_score(true_cls_list, pred_cls_list, average='micro'):.2f}")
+    print(f"\nF1 score (macro) during {mode} is: {f1_score(true_cls_list, pred_cls_list, average='macro'):.2f}")

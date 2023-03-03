@@ -4,7 +4,7 @@ import random
 import numpy as np
 import torch
 from bilstm_classifier import BiLSTMClassifier
-from utils import dataset_length, parse_dataset, batch_prediction
+from utils import dataset_length, parse_dataset, batch_prediction, STOP_WORDS
 import yaml
 from bow_classifier import BoWClassifier
 from ensemble_classifier import EnsembleClassifier
@@ -58,7 +58,7 @@ def batch_training_bow(epochs,  batch_size, train_sent_vec_list, labels_encoded,
             print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, epochs, i + 1, len(loader_training), loss.item()))
 
 
-def get_pretrained_embeddings(glove_path):
+def get_pretrained_embeddings(glove_path, remove_stopwords):
     embeddings_glove_bow = []
     emb_dict_glove_bow = {}
     with open(glove_path,'rt', encoding='utf-8') as glove_file:
@@ -66,8 +66,13 @@ def get_pretrained_embeddings(glove_path):
     for vector in range(len(pretrained_vectors)):
         word = pretrained_vectors[vector].split("\t")[0]
         word_vector = [float(val) for val in pretrained_vectors[vector].split('\t')[1].split(' ')[0:]]
-        embeddings_glove_bow.append(word_vector)
-        emb_dict_glove_bow[word] = word_vector
+        if(remove_stopwords):
+            if(word not in STOP_WORDS):
+                embeddings_glove_bow.append(word_vector)
+                emb_dict_glove_bow[word] = word_vector
+        else:
+            embeddings_glove_bow.append(word_vector)
+            emb_dict_glove_bow[word] = word_vector
     return emb_dict_glove_bow, embeddings_glove_bow
 
 
@@ -153,6 +158,10 @@ def train(config_file):
             } 
             for ques in training_question_list:
                 custom_vocab_list = custom_vocab_list + ques.lower().split(' ')
+
+            if(config["remove_stopwords"]):
+                custom_vocab_list = [i for i in custom_vocab_list if i not in STOP_WORDS]
+
             for i in custom_vocab_list:
                 if i not in list(custom_vocab_count.keys()):
                     custom_vocab_count[i] = 1
@@ -173,7 +182,7 @@ def train(config_file):
                 sent_idx_random.append(sent_indices_tensor)
             embeddings = torch.randn(len(word_indices), config["word_embedding_dim"])
         else:
-            emb_dict_glove_bow, embeddings = get_pretrained_embeddings(config["pretrained_glove"])
+            emb_dict_glove_bow, embeddings = get_pretrained_embeddings(config["pretrained_glove"], config["remove_stopwords"])
             zeroes = [0 for i in range(0, 300)]
             embeddings.append(zeroes)
             word_indices = {}
@@ -212,7 +221,11 @@ def train(config_file):
 # ************************************************* BiLSTM begins ****************************************************************
     elif(config["model"] == "bilstm"):
         print("\nIt's BiLSTM")
-        vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])    
+        vocab = set([word for sentence, _  in train_parsed_list for word in sentence.lower().split()])
+
+        if(config["remove_stopwords"]):
+            vocab = vocab - set(STOP_WORDS)
+            
         word_indices = {word: index + 2 for index, word in enumerate(vocab)}
         word_indices["#PAD#"] = 0
         word_indices["#UNK#"] = 1
@@ -221,7 +234,7 @@ def train(config_file):
         if(config["embedding"] == "random"):
             embeddings = np.random.uniform(-1, 1, (vocab_size, config["word_embedding_dim"]))
         else:
-            emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"])
+            emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"], config["remove_stopwords"])
             embeddings = np.zeros((len(emb_dict_glove_bow)+2, config["word_embedding_dim"])) 
             i = 0
             for word in emb_dict_glove_bow.keys():
@@ -253,7 +266,7 @@ def train(config_file):
         word_indices["#UNK#"] = 1
         vocab_size = len(word_indices)
 
-        emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"])
+        emb_dict_glove_bow, _ = get_pretrained_embeddings(config["pretrained_glove"], config["remove_stopwords"])
         embeddings = np.zeros((len(emb_dict_glove_bow)+2, config["word_embedding_dim"])) 
         i = 0
         for word in emb_dict_glove_bow.keys():
